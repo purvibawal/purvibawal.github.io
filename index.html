@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>PBAWAL H516 Project 1</title>
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src = "https://axc.net/code_libraries/lasso/lasso.min.js"></script>
+	<style>
+    	text { 
+			font-family: Arial; 
+			font-size: 15px;
+		}
+		
+		.axis path, .axis line {
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+		.tick text {
+			fill: black;
+			font-size: 11px;
+		}
+
+		.rect {
+			stroke: white;
+		}
+		.focus circle {
+        fill: steelblue;
+    }
+
+    .focus text {
+        font-size: 14px;
+    }
+
+    .tooltip {
+        fill: white;
+        stroke: #000;
+    }
+
+    .tooltip-date, .tooltip-likes {
+        font-weight: bold;
+    }
+	
+		div.tooltip {	
+		position: absolute;			
+		text-align: center;			
+		width: 100px;					
+		height: 40px;					
+		padding: 2px;				
+		font: 12px sans-serif;		
+		background: lightsteelblue;	
+		border: 0px;		
+		border-radius: 8px;			
+		pointer-events: none;			
+		}
+		
+		.dot {
+		stroke: #000;
+		}
+
+		.selection {
+		stroke          : gray;
+		stroke-width    : 1px;
+		stroke-dasharray: 4px;
+		stroke-opacity  : 0.5;
+		fill            : transparent;      
+		}
+
+		.selected{
+		fill: yellow !important;
+		}
+		
+		
+		.brush .background {
+      stroke: none;
+      fill: none;
+    }
+    
+    .brush .extent {
+      stroke: #fff;
+      fill-opacity: .125;
+      shape-rendering: crispEdges;
+    }
+    
+    .brush text {
+      font-size: 0.75em;
+    }
+	
+	.lasso path {
+	stroke: rgb(80,80,80);
+	stroke-width:2px;
+	}
+
+	.lasso .drawn {
+	fill-opacity:.05 ;
+	}
+
+	.lasso .loop_close {
+	fill:none;
+	stroke-dasharray: 4,4;
+	}
+
+	.lasso .origin {
+	fill:#3399FF;
+	fill-opacity:.5;
+	}
+
+	.not_possible {
+	fill:rgb(200,200,200);
+	}
+
+	.possible {
+	fill:#EC888C;
+	}
+	</style>
+</head>
+<body>
+<center><h1>1854 Broad Street cholera outbreak visualization</h1></center>
+<text>The Broad Street cholera outbreak (or Golden Square outbreak) was a severe outbreak of cholera that occurred in 1854 near Broad Street (now Broadwick Street) in the Soho district of the City of Westminster, London, England, and occurred during the 1846–1860 cholera pandemic happening worldwide. This outbreak, which killed 616 people, is best known for the physician John Snow's study of its causes and his hypothesis that germ-contaminated water was the source of cholera, rather than particles in the air.(<a href="https://en.wikipedia.org/wiki/1854_Broad_Street_cholera_outbreak" target="_blank">Ref.</a>)</text>
+</br>
+<text>This is an attempt to create a visualization of the street map and location of deaths in London, to help analyze the data effectively and easily.</text>
+<br/><br/>
+<a href="documentation.html" target="_blank">Documentation</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" target="_blank">Demonstration video</a>
+<table >
+	
+	<tr>
+		<td style="padding:0px">
+	
+	<h3>Street Map - London</h3>
+<a href="javascript:enableZoom();" id="ez">Enable zoom</a>&nbsp;&nbsp;<a href="javascript:disableZoom();" id="dz">Disable zoom</a>
+	<svg id="svg1" width="600" height="400">
+			</svg>
+		</td>
+		
+		<td>
+			<h3 width="500">Timeline chart - Death count</h3>
+			<svg id = "svg2" width="600" height="400">
+			<g transform="translate(70)"></g>
+			</svg>
+		</td>
+	</tr>
+	</table>
+	
+	<table>
+	<tr>
+	<td>
+		<h3>Age group wise death count for both genders</h3>
+		<svg id = "svg3" width="700" height="500">
+		<g transform="translate(30,0)"></g>
+		</svg>
+	</td>
+	</tr>
+</table>
+	<script>
+	var scale = null;
+	function enableZoom(){
+	
+	document.getElementById("ez").style.display = "none";
+	document.getElementById("dz").style.display = "block";
+	//("#dz").show();
+	d3.select("body").select("#svg1")
+	.call(d3.behavior.zoom().on("zoom", function (){
+					svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")}));
+	//disable lasso
+	
+	lasso.on("start", null);
+	lasso.on("draw", null);
+	lasso.on("end", null);
+	}
+	
+	function disableZoom(){
+	var url = window.location.href;    
+	if (url.indexOf('?') == -1){
+		url += '?param=ds';
+	}
+	window.location.href = url;
+	}
+	function disableZoom11(){
+	//location.reload(true);
+	document.getElementById("dz").style.display = "none";
+	document.getElementById("ez").style.display = "block";
+	//("#dz").show();
+	d3.select("body").select("#svg1")
+	.call(d3.behavior.zoom().on("zoom", null));
+	//enable lasso
+	lasso.on("start", lasso_start);
+	lasso.on("draw", lasso_draw);
+	lasso.on("end", lasso_end);
+	}
+	
+		var CHART_WIDTH = 600;
+		var CHART_HEIGHT = 250;
+		var xScale = d3.scale.linear();
+		var yScale = d3.scale.linear();
+	
+		///var MAX_BAR_HEIGHT = 100;
+
+		var energyProduction = [];
+		var pumps = [];
+		var deathAgeSex = [];
+		var m1=0;
+		var m2=0;
+		var m3=0;
+		var m4=0;
+		var m5=0;
+		var m0=0;
+		var f1=0;
+		var f2=0;
+		var f3=0;
+		var f4=0;
+		var f5=0;
+		var f0 =0;		
+		// Define the div for the tooltip
+		var div = d3.select("body").append("div")	
+		.attr("class", "tooltip")				
+		.style("opacity", 0);
+		
+		var svg = d3.select("body")
+			.select("#svg1")
+			/*.call(d3.behavior.zoom().on("zoom", function () {
+				svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+			}))*/
+			.append("g");
+			
+		function drawLineChart(col,st) 
+		{
+			xScale.domain([3, 20]).range([0, CHART_WIDTH]);
+			
+			yScale.domain([4,20]).range([CHART_HEIGHT, 0]);
+
+			var pathGenerator = d3.svg.line()
+				.x(function(d) { return xScale(d.x); })
+				.y(function(d) { return yScale(d.y) });
+			
+			var g = d3.select('#svg1').select('g');
+
+    		g.append('path')
+    			.style('fill', 'none')
+    			.style('stroke', col)
+    			.style('stroke-width', '2px')
+    			.attr('d', pathGenerator(energyProduction))
+				.on("mouseover", function() {	
+				if(st!=""){
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div.html("This is "+st+".")	
+					.style("left", (d3.event.pageX+15)+"px")
+					.style("top", (d3.event.pageY-28)+"px");	
+					}
+					})					
+				.on("mouseout", function() {		
+					if(st!=""){
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+				}});
+				
+				//pump
+  svg.append("rect")
+    .attr("x", 0)
+    .attr("y", 330)
+    .attr("width", 10)
+    .attr("height", 10)
+    .style("fill", "black")
+    .style("stroke","grey")
+    .style("stroke-width",0.8);
+
+  
+
+  //workhouse
+  svg.append("rect")
+    .attr("x", 0)
+    .attr("y", 350)
+    .attr("width", 10)
+    .attr("height", 10)
+    .style("fill", "#83aff7")
+    .style("stroke-width",0.8);
+	
+	//Streets
+  svg.append("rect")
+    .attr("x", 120)
+    .attr("y", 375)
+    .attr("width", 70)
+    .attr("height", 2)
+    .style("fill", "blue");
+    //.style("stroke-width",0.8);
+
+  //brewery 
+  svg.append("rect")
+    .attr("x", 0)
+    .attr("y", 370)
+    .attr("width", 10)
+    .attr("height", 10)
+    .style("fill", "#f7f788")
+    .style("stroke-width",0.8); 
+
+    /*var label = [{x:5,y:415,color:"white"},{x:120,y:355,color:"steelblue"},{x:120,y:375,color:"orange"},
+                  {x:200,y:355,color:"#b2182b"},{x:200,y:375,color:"#ef8a62"},{x:200,y:395,color:"#fddbc7"},
+                  {x:200,y:415,color:"#d1e5f0"},{x:200,y:435,color:"#67a9cf"},{x:200,y:455,color:"#2166ac"},]*/
+
+	//var label = [{x:120,y:335,color:"#640000"},{x:135,y:335,color:"#9f0000"},{x:150,y:335,color:"#d90000"},{x:165,y:335,color:"#ff2929"},{x:180,y:335,color:"#ff7777"},{x:195,y:335,color:"#ffb2b2"}
+	var label = [{x:120,y:335,color:"#7f00ff"},{x:135,y:335,color:"#9d47ff"},{x:150,y:335,color:"#b66fff"},{x:165,y:335,color:"#cc94ff"},{x:180,y:335,color:"#dfb7ff"},{x:195,y:335,color:"#f0dbff"}
+	,{x:120,y:355,color:"#003b00"},{x:135,y:355,color:"#007600"},{x:150,y:355,color:"#00b100"},{x:165,y:355,color:"#00eb00"},{x:180,y:355,color:"#14ff14"},{x:195,y:355,color:"#c4ffc4"}]
+				  
+    svg.selectAll("dot")  
+        .data(label)     
+    .enter().append("ellipse")                 
+        .attr("cx", function(d) { return d.x; })     
+        .attr("cy", function(d) { return d.y; })
+        .attr("rx", 5) 
+        .attr("ry", 5)
+        .style("fill", function(d) { return d.color; }) 
+        .style("stroke","grey")
+        .style("stroke-width",1); 
+
+    var illustrator = [{name:'Pumps',x:15,y:335},{name:'Work House',x:15,y:355},
+              {name:'Brewery',x:15,y:375},//{name:'Deaths location',x:15,y:415},
+              {name:'Males (Age groups 0 to 80 and above)',x:205,y:335},{name:'Females (Age groups 0 to 80 and above)',x:205,y:355},{name:'Major Streets (hover for street names)',x:205,y:375},
+              /*{name:'0-10',x:210,y:355},{name:'11-20',x:210,y:375},{name:'21-40',x:210,y:395},
+              {name:'41-60',x:210,y:415},{name:'61-80',x:210,y:435},{name:'>80',x:210,y:455}
+              ,{name:'Original Map:',x:0,y:330},{name:'Gender:',x:115,y:330},{name:'Age:',x:195,y:330},*/{name:'Legend:',x:10,y:310}]
+
+  svg.selectAll(".place-label")
+          .data(illustrator)
+          .enter().append("text")
+          .attr("class", "place-label")
+          .attr("x", function(d) { return d.x; })
+          .attr("y", function(d) { return d.y; })
+       //.attr("transform", function(d) { return "translate(" + d.x+"," +d.y ")"; })
+           .attr("dy", ".35em")
+    //.text("ddddddddd");
+           .text(function(d) { return d.name; });
+			
+			svg.selectAll(".place-label")
+          .data(illustrator)
+          .enter().append("text")
+          .attr("class", "place-label")
+          .attr("x", 120)
+          .attr("y", 370)
+       //.attr("transform", function(d) { return "translate(" + d.x+"," +d.y ")"; })
+           .attr("dy", ".35em")
+    //.text("ddddddddd");
+           .text("_________");
+		}
+		
+		d3.json("streets.json", function(data) {
+			//console.log(data.length);
+			var col = ''
+			var street = ''
+			for(var i=0; i<data.length ; i++){
+			
+			var value = data[i];
+			energyProduction=[];
+			for(var j = 0; j<value.length;j++){
+					value1 = value[j]
+					
+						if(i == 202||i==215 || i==233 || i == 177 || i ==186 || i==192){ //Broad street
+						//col = '#AED6F1';
+						col = 'blue';
+						street = "Broad Street";
+						}
+						else if(i == 339 || i==356 || i==373 || i==398){
+						col = 'blue';
+						street = "Brewer Street";
+						}
+						else if(i == 19||i==21||i==24||i==31||i==32 ||i==37||i==41||i==49|| i==63|| i==67||i==71||i==75||i==79||i==82||i==86||i==89	||i==93||i==94||i==98||i==99||i==112||i==108){
+						col = 'blue';
+						street = "Oxford Street";
+						}
+						else
+							{
+							//col = 'black';
+							col = 'grey';
+							street = "";
+							}
+					var object = {
+						//x: +value1.x*1.2,
+						//y: +value1.y*1.2,
+						x: +value1.x,
+						y: +value1.y,
+						c: col,
+						st : street
+						
+					};
+
+					energyProduction.push(object);
+			}
+			drawLineChart(col,street);
+			}
+			
+		});
+		
+		 var brewery = [{x:270,y:62,w:13,h:10,rotate:52.5}];
+		 var bre = svg.append("rect")
+          .data(brewery)
+          .attr("x", function(d) { return d.x; })
+		  .attr("y", function(d) { return d.y; })
+          .attr("transform", function (d) 
+            { return "rotate(" + d.rotate + " 270, 207.5)"; })
+		  .attr("width", function(d) { return d.w; })
+          .attr("height", function(d) { return d.h; })
+          .style("fill", "#f7f788")
+		  .attr("stroke", 'grey')
+          .attr("stroke-opacity",0.8)
+		  .on("mouseover", function(d) {	
+				div.transition()		
+					.duration(200)		
+					.style("opacity", 0.9);		
+				div.html("This is the brewery.")	
+					.style("left", (d3.event.pageX+15)+"px")
+					.style("top", (d3.event.pageY-28)+"px");	
+					})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+				});
+		  
+		   var workHouse = [{x:300,y:90,w:25,h:20,rotate:-17}];
+		   var work = svg.append("rect")
+          .data(workHouse)
+          .attr("transform", function (d) 
+            { return "rotate(" + d.rotate + " 311,170)"; })
+          .attr("x", function(d) { return d.x; })
+          .attr("y", function(d) { return d.y; })
+          .attr("width", function(d) { return d.w; })
+          .attr("height", function(d) { return d.h; })
+          .attr("stroke", 'grey')
+          .attr("stroke-opacity",0.8)
+          .style("fill", "#83aff7")
+		  .on("mouseover", function(d) {
+				//alert('hi');
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div.html("This is the Work House.")	
+					.style("left", (d3.event.pageX+15)+"px")
+					.style("top", (d3.event.pageY-28)+"px");	
+					})					
+			.on("mouseout", function(d) {		
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+				}); 
+
+		   
+		   
+		function drawScatterPlot(){
+		xScale.domain([3, 20]).range([0, CHART_WIDTH]);
+		yScale.domain([4,20]).range([CHART_HEIGHT, 0]);
+		var g = d3.select('#svg1').select('g');
+		g.selectAll('rect')
+    			.data(pumps)
+    			.enter()
+    			.append('rect')
+    			.style('fill', 'black')
+    			.attr('height', 10)
+				.attr('width', 10)
+    			.attr('x', function(d) { return xScale(d.x) })
+    			.attr('y', function(d) {return yScale(d.y)})
+				.on("mouseover", function(d) {	
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div.html("This is a pump.")	
+					.style("left", (d3.event.pageX+15)+"px")
+					.style("top", (d3.event.pageY-28)+"px");	
+					})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+				});
+		
+		}
+		
+		
+
+		
+	// colors for deaths male
+	var mColors = d3.scale
+		.linear()
+		.domain([0, 5])
+		.range(["#87CEFF", "#0000FF"]);
+	
+	
+	var colorScaleM = d3.scale.linear().domain([0,1,2,3,4, 5])
+//    .range(["#2908FD","#5C44F6","#7A6BDE","#897DD2","#A095E0","#B5B0D7"])
+//.range(["#640000","#9f0000","#d90000","#ff2929","#ff7777","#ffb2b2"])
+	.range(["#7f00ff","#9d47ff","#b66fff","#cc94ff","#dfb7ff","#f0dbff"]);
+	
+	var colorScaleF = d3.scale.linear().domain([0,1,2,3,4, 5])
+    //.range(["#FC018F","#FA37A5","#FB60B8","#F693CB","#FAB9DD","#FBDAED"])
+	//.range(["#003b00","#007600","#00b100","#00eb00","#14ff14","#c4ffc4"]);
+	.range(["#199f00","#54b03d","#7ac064","#9dd08a","#bee0b1","#dff0d7"]);
+	
+	function drawDeathScatterPlot(){
+		xScale.domain([3, 20]).range([0, CHART_WIDTH]);
+		yScale.domain([4,20]).range([CHART_HEIGHT, 0]);
+		var g = d3.select('#svg1').select('g');
+
+		g.selectAll("path")
+			.data(deathAgeSex)
+			.enter()
+			.append('circle')
+			.attr('r',4)
+			.attr('cx', function(d) { return xScale(d.x) })
+    		.attr('cy', function(d) {return yScale(d.y)})
+			.attr('date',function(d){return d.date1})
+			//.style('fill','pink');
+			.style('stroke', 'black')
+    		.style('stroke-width', '1px')
+			.style('fill',function(d){
+					if(d.gen == '0')
+						return colorScaleM(d.age);
+					else
+						return colorScaleF(d.age);
+					
+					})
+			.style('opacity',0.7)
+			.on("mouseover", function(d) {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div.html("Gender : "+d.gen1+"</br>Age : "+d.age1+"</br>Died : "+d.date1)	
+					.style("left", (d3.event.pageX+15)+"px")
+					.style("top", (d3.event.pageY-28)+"px");
+	
+					})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+				});
+		lasso.items(d3.selectAll("circle"));
+		
+		}
+		
+	
+	function drawLineChartByGA() 
+		{
+			var maxValue = d3.max(energyProduction);
+			
+			var xScale = d3.scale.linear();
+			var yScale = d3.scale.linear();
+
+			xScale.domain([0,5]).range([0, CHART_WIDTH]);
+			
+			yScale.domain([0,100]).range([CHART_HEIGHT, 0]);
+
+			var pathGenerator = d3.svg.line()
+				.x(function(d) { return xScale(d.age); })
+				.y(function(d) { return yScale(d.cnt) });
+				
+
+			var g = d3.select('#svg3').select('g');
+
+			
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    			.orient('bottom')
+				.ticks(7)
+    			.tickFormat(function(d) { if(d==0) {return "0-10";} else if(d==1){return "11-20";} else if(d==2){return "21-40";} else if(d==3){return "41-60";} else if(d==4){return "61-80";} else if(d==5){return ">80";} })
+
+    		var yAxis = d3.svg.axis()
+    			.scale(yScale)
+    			.orient('left');
+
+
+    		g.append('g')
+    			.attr('class', 'xaxis axis')
+    			.attr('transform', 'translate(0,' + CHART_HEIGHT + ')')
+    			.call(xAxis);
+
+    		g.append('g')
+    			.attr('class', 'yaxis axis')
+    			.call(yAxis);
+
+			g.append('path')
+    			.style('fill', 'none')
+    			.style('stroke', '#199f00')
+    			.style('stroke-width', '3px')
+    			.attr('d', pathGenerator(femaleDeaths));
+			
+			g.append('path')
+    			.style('fill', 'none')
+    			.style('stroke', '#7f00ff')
+    			.style('stroke-width', '3px')
+    			.attr('d', pathGenerator(maleDeaths));
+			
+			
+			g.selectAll("dot")	
+				.data(maleDeaths)			
+				.enter().append("circle")								
+				.attr("r", 3)		
+				.attr("cx", function(d) { return xScale(d.age); })		 
+				.attr("cy", function(d) { return yScale(d.cnt); })		
+				.on("mouseover", function(d) {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div	.html("Gender: Male<br/>Age group:"+d.age1 + "<br/>Count:"  + d.cnt)	
+					.style("left", (d3.event.pageX) + "px")		
+					.style("top", (d3.event.pageY - 28) + "px");	
+            })					
+        .on("mouseout", function(d) {		
+            div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });
+		
+		
+		g.selectAll("dot")	
+				.data(femaleDeaths)			
+				.enter().append("circle")								
+				.attr("r", 3)		
+				.attr("cx", function(d) { return xScale(d.age); })		 
+				.attr("cy", function(d) { return yScale(d.cnt); })		
+				.on("mouseover", function(d) {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div	.html("Gender: Female<br/>Age group:"+d.age1 + "<br/>Count:"  + d.cnt)	
+					.style("left", (d3.event.pageX) + "px")		
+					.style("top", (d3.event.pageY - 28) + "px");	
+            })					
+        .on("mouseout", function(d) {		
+            div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });
+
+			g.append("text")
+			.attr("class", "x label")
+			.attr("text-anchor", "end")
+			.attr("x", CHART_WIDTH/2)
+			.attr("y", CHART_HEIGHT +30)
+			.attr("style","font-size:12")
+			.text("Age Groups");
+			
+			g.append("text")
+			.attr("class", "y label")
+			.attr("text-anchor", "end")
+			.attr("x", -(CHART_HEIGHT/2))
+			.attr("y", -21)
+			.attr("transform", "rotate(-90)")
+			.attr("style","font-size:12")
+			.text("Count");
+			
+		}
+		
+		var lasso_start = function() {
+  lasso.items()
+    //.attr("r",3.5) // reset size
+    //.style("fill",null) // clear all of the fills
+    .classed({"not_possible":true,"selected":false}); // style as not possible
+};
+
+var lasso_draw = function() {
+  // Style the possible dots
+  lasso.items().filter(function(d) {return d.possible===true})
+    .classed({"not_possible":false,"possible":true});
+
+  // Style the not possible dot
+  lasso.items().filter(function(d) {return d.possible===false})
+    .classed({"not_possible":true,"possible":false});
+	//console.log("in draw");
+};
+
+var lasso_end = function() {
+  // Reset the color of all dots
+  /*lasso.items()
+     .style("fill", function(d) { return color(d.species); });*/
+//alert(lasso.items());
+  // Style the selected dots
+  var cnt=0;
+//  alert(lasso.items().filter(function(d) {return d.selected===true}));
+  //alert(lasso.items().filter(function(d) {return d.selected===true})[0].length);
+			
+	
+		div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div.html("Death count in selected area : "+lasso.items().filter(function(d) {return d.selected===true})[0].length)	
+					//.style("left", (d3.event.pageX+15)+"px")
+					//.style("top", (d3.event.pageY-28)+"px")
+					;
+   
+			/*div.transition()		
+					.duration(500)		
+					.style("opacity", 0);*/
+  
+	lasso.items().filter(function(d) {return d.selected===true;})
+	.classed({"not_possible":false,"possible":false});
+    //.attr("r",7);
+	//lasso.items().filter(function(d) {return d.selected===true}).attr("r",7);
+  // Reset the style of the not selected dots
+  lasso.items().filter(function(d) {return d.selected===false;})
+    .classed({"not_possible":false,"possible":false});
+  /*/  .attr("r",7);*/
+
+};
+
+// Create the area where the lasso event can be triggered
+var lasso_area = svg.append("rect")
+                      .attr("width",CHART_WIDTH)
+                      .attr("height",CHART_HEIGHT)
+                      .style("opacity",0);
+
+// Define the lasso
+var lasso = d3.lasso()
+      .closePathDistance(75) // max distance for the lasso loop to be closed
+      .closePathSelect(true) // can items be selected by closing the path?
+      //.hoverSelect(true) // can items by selected by hovering over them?
+      .area(lasso_area) // area where the lasso can be started
+      .on("start",lasso_start) // lasso start function
+      .on("draw",lasso_draw) // lasso draw function
+      .on("end",lasso_end); // lasso end function
+
+// Init the lasso on the svg:g that contains the dots
+	
+		
+		if(window.location.href.indexOf("param")>-1)
+		{
+		d3.select("#svg1").call(lasso);
+		disableZoom11();
+		}
+		else{
+		enableZoom();
+		}
+		
+		d3.csv('pumps.csv', function(data) 
+		{
+			for (var i=0; i<data.length; i++)
+			{
+				var record = data[i];
+				
+				var object = {
+						//x: +record.x*1.2,
+						//y: +record.y*1.2
+						x: +record.x,
+						y: +record.y
+					};
+				pumps.push(object);
+				
+			}
+			drawScatterPlot();
+
+		});
+		
+	d3.csv('deaths_age_sex.csv', function(data) 
+		{
+			for (var i=0; i<data.length; i++)
+			{
+				var record = data[i];
+				//console.log(record.x+":"+record.y+":"+record.age+":"+record.gender)
+				var v_age1="";
+				if(record.age==0)
+								v_age1 = "0-10"
+								else if(record.age==1)
+									v_age1 = "11-20"
+								else if(record.age==2)
+									v_age1 = "21-40"
+								else if(record.age==3)
+									v_age1 = "41-60"
+								else if(record.age==4)
+									v_age1 = "61-80"
+								else if(record.age==5)
+									v_age1 = "> 80"
+				if(record.gender == 0)
+					{
+					//console.log("Male")
+					v_gen = "Male";
+				if (record.age==0)
+					m0++;
+				else if (record.age==1)
+					m1++;
+				else if (record.age==2)
+					m2++;
+				else if (record.age==3)
+					m3++;
+				else if (record.age==4)
+					m4++;
+				else if (record.age==5)
+					m5++;
+					}					
+				else
+					{
+					v_gen = "Female";
+			if (record.age=="0")
+				f0++;
+			else if (record.age==1)
+				f1++;
+			else if (record.age==2)
+				f2++;
+			else if (record.age==3)
+				f3++;
+			else if (record.age==4)
+				f4++;
+			else if (record.age=="5")
+				f5++;
+					}
+				var object = {
+						//x: +record.x*1.2,
+						//y: +record.y*1.2,
+						x: +record.x,
+						y: +record.y,
+						age : +record.age,
+						age1 : v_age1,
+						gen : record.gender,
+						gen1 : v_gen,
+						date1 : record.date_death
+					};
+				deathAgeSex.push(object);
+			
+			}
+			drawDeathScatterPlot();
+			
+			var mDeath = {
+				age : 0,
+				cnt : m0,
+				age1 : "0-10"
+				}
+			maleDeaths.push(mDeath);
+			mDeath = {age : 1,
+			cnt : m1,
+			age1 : "11-20"}
+			maleDeaths.push(mDeath);
+			mDeath = {age : 2,
+			cnt : m2,
+			age1 : "21-40"}
+			maleDeaths.push(mDeath);
+			mDeath = {age : 3,
+			cnt : m3,
+			age1 : "41-60"}
+			maleDeaths.push(mDeath);
+			mDeath = {age : 4,
+			cnt : m4,
+			age1 : "61-80"}
+			maleDeaths.push(mDeath);
+			mDeath = {age : 5,
+			cnt : m5,
+			age1 : ">80"}
+			maleDeaths.push(mDeath);
+			
+			var fDeath = {
+				age : 0,
+				cnt : f0,
+				age1 : "0-10"
+				}
+			femaleDeaths.push(fDeath);
+			fDeath = {age : 1,
+			cnt : f1,
+			age1 : "11-20"}
+			femaleDeaths.push(fDeath);
+			fDeath = {age : 2,
+			cnt : f2,
+			age1 : "21-40"}
+			femaleDeaths.push(fDeath);
+			fDeath = {age : 3,
+			cnt : f3,
+			age1 : "41-60"}
+			femaleDeaths.push(fDeath);
+			fDeath = {age : 4,
+			cnt : f4,
+			age1 : "61-80"}
+			femaleDeaths.push(fDeath);
+			fDeath = {age : 5,
+			cnt : f5,
+			age1 : ">80"}
+			femaleDeaths.push(fDeath);
+			
+			//console.log(maleDeaths);
+			//console.log(femaleDeaths);
+			drawLineChartByGA();
+		});
+	
+	
+	//Start of SVG graph 2 Death by days
+		
+		var div = d3.select("body").append("div")	
+		.attr("class", "tooltip")				
+		.style("opacity", 0);
+		
+		var deaths = [];
+
+		var timeFormat = d3.time.format('%Y-%m-%d');
+		function drawLineChartDbyD() 
+		{
+		
+			var CHART_WIDTH1 = 420;
+			var CHART_HEIGHT = 180;
+
+			var MAX_BAR_HEIGHT = 150;
+
+			//var timeFormat = d3.time.format('%Y-%m-%d');
+			var xScale = d3.time.scale();
+			var yScale = d3.scale.linear();
+			var nScale = d3.scale.linear();
+			//xScale.domain([0, 41]).range([0, CHART_WIDTH]);
+			xScale.domain([timeFormat.parse('2018-08-19'),timeFormat.parse('2018-09-29')]).range([0,CHART_WIDTH1]);
+			
+			yScale.domain([0,MAX_BAR_HEIGHT]).range([CHART_HEIGHT, 0]);
+			nScale.domain([0,41]).range([0, CHART_WIDTH1]);
+
+			var pathGenerator = d3.svg.line()
+				.x(function(d) {  return nScale(d.x); })
+				.y(function(d) { return yScale(d.y) });
+
+			var g = d3.select('#svg2').select('g');
+
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    			.orient('bottom');
+    			//.tickFormat(function(d) { return "" + d; })
+
+    		var yAxis = d3.svg.axis()
+    			.scale(yScale)
+    			.orient('left');
+
+
+    		g.append('g')
+    			.attr('class', 'axis')
+    			.attr('transform', 'translate(0,' + CHART_HEIGHT + ')')
+    			.call(xAxis);
+
+    		g.append('g')
+    			.attr('class', 'axis')
+    			.call(yAxis);
+			
+			
+    		g.append('path')
+    			.style('fill', 'none')
+    			.style('stroke', 'steelblue')
+    			.style('stroke-width', '1px')
+    			.attr('d', pathGenerator(deaths));
+		
+			var brush = d3.svg.brush()
+			.x(xScale)
+			.on("brush", brushmove);
+    
+			var brushg = g.append("g")
+				.classed("brush", true)
+				.call(brush);
+    
+			brushg.selectAll("rect")
+			.style("visibility", null)
+			.attr("x", 0)
+			.attr("y",CHART_HEIGHT)
+			.attr("width", CHART_WIDTH1)
+			.attr("height",20);
+    
+			brushg.selectAll(".resize rect")
+			.attr("width", 3);
+    
+			brushg.selectAll(".resize.n")
+			.append("text")
+			.text("")
+			.style("text-anchor", "end")
+			.attr("dx", "-0.7em")
+			.attr("dy", "-0.45em")
+    
+			brushg.selectAll(".resize.s")
+			.append("text")
+			.text("")
+			.style("text-anchor", "end")
+			.attr("dx", "-0.7em")
+			.attr("dy", "0.8em")
+    
+			function brushmove() {
+			//debugger
+			d3.select(this).select(".resize.n text").text(brush.extent()[0]);
+			d3.select(this).select(".resize.s text").text(brush.extent()[1]);
+			var cir = document.getElementById("svg1").getElementsByTagName("circle");
+			var c;
+			var dt;
+			var dtFormat = d3.time.format('%d-%m');
+			for (i = 0; i<cir.length; i++)
+			{
+			c = cir[i];
+			dt = c.getAttribute("date");
+			
+			//console.log(dt);
+			
+			if(dt!=null )
+			{
+			dt = dt.replace("Aug","07");
+			dt = dt.replace("Sep","08");
+			
+				if(dtFormat.parse(brush.extent()[0].getDate()+"-"+brush.extent()[0].getMonth()) <= dtFormat.parse(dt) && dtFormat.parse(dt) <= dtFormat.parse(brush.extent()[1].getDate()+"-"+brush.extent()[1].getMonth()))
+				{
+				//console.log(dtFormat.parse(brush.extent()[0].getDate()+"-"+brush.extent()[0].getMonth()));
+			//console.log(dtFormat.parse(dt));
+			//console.log(dtFormat.parse(brush.extent()[1].getDate()+"-"+brush.extent()[1].getMonth()));
+			//console.log("");
+				c.style.display = "block";
+				}
+				else{
+				c.style.display = "None";
+				}
+			}
+			}
+			}
+			
+			g.append("text")
+			.attr("class", "x label")
+			.attr("text-anchor", "end")
+			.attr("x", CHART_WIDTH/3)
+			.attr("y", CHART_HEIGHT +30)
+			.attr("style","font-size:12")
+			.text("Date of death");
+			
+			g.append("text")
+			.attr("class", "y label")
+			.attr("text-anchor", "end")
+			.attr("x", -(CHART_HEIGHT/2))
+			.attr("y", -24)
+			.attr("transform", "rotate(-90)")
+			.attr("style","font-size:12")
+			.text("Count");
+			
+			g.selectAll("dot")	
+				.data(deaths)			
+				.enter().append("circle")								
+				.attr("r", 3)		
+				.attr("cx", function(d) { return nScale(d.x); })		 
+				.attr("cy", function(d) { return yScale(d.y); })		
+				.on("mouseover", function(d) {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", .9);		
+				div	.html("Date:"+d.dt + "<br/>Count:"  + d.y)	
+					.style("left", (d3.event.pageX) + "px")		
+					.style("top", (d3.event.pageY - 28) + "px");	
+            })					
+        .on("mouseout", function(d) {		
+            div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });
+		}
+
+		d3.csv('deathdays.csv', function(data) 
+		{
+			//console.log("Hi!");
+			for (var i=0; i < data.length; i++)
+			{
+				var record = data[i];
+					
+					var object = {
+						dt: record.date,
+						x:i,
+						y: +record.deaths
+					};
+
+				deaths.push(object);
+				
+			}
+			drawLineChartDbyD();
+
+		});	
+		
+		var femaleDeaths = [];
+		var maleDeaths = [];
+		
+	</script>
+</body>
+
+
+</html>
