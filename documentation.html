@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>PBAWAL H516 Project 1</title>
+</head>
+<body>
+<center><h1>1854 Broad Street cholera outbreak visualization</h1></center>
+<p>This page gives the documentation of H516 Project 1 by PBAWAL of IUPUI. I have tried to document the process followed by me.</p>
+<p>
+<h4>Design Process:</h4>
+Since the requirement shared was very detailed and stepwise, I saved a lot of time.
+My first target was to cover the basic requirements mentioned for grade C followed by B and then A. The sequence of tasks were as below:
+<ol>
+<li>Plot the streets.</li>
+<li>Plot pumps.</li>
+<li>Plot death locations.</li>
+<li>Plot the timeline chart.</li>
+<li>Implement the third chart for death count by age and gender.</li>
+<li>Interaction between street map and timeline chart using brush(for window selection).</li>
+</ol>
+</p>
+
+<p>
+Once the basics were implemented, I started implementing the rest of the requirements.
+<ol>
+<li>Street names, work house and brewery.</li>
+-Find the street co-ordinates and areas of work house and brewery and highlight it with different colors.
+<li>Add labels to graphs.</li>
+<li>Add tooltips for most of the points and co-ordinates.</li>
+<li>Add zoom functionality.</li>
+<li>Add cluster selection ability.</li>
+- This was done with disabled zoom because mouse drag didnt work well with 2 listeners(panning and selection).
+<li>Adding legend.</li>
+</ol>
+</p>
+<p>
+Initial design had a few paper drawings. Below are some that were actually used for implementation:
+<table cellspacing=20 cellpadding=20>
+<tr>
+<td><text>Page layout design</text></br><img src="Layout.jpg" width="300" /></td>
+<td><text>Graphs design</text></br><img src="Detailed.jpg" width="400" /></td>
+</tr>
+</table>
+</p>
+
+<p>
+<h4>Rationale of design:</h4>
+The first visual had to be the street map with scatterplot since it is the most important part of this project.
+Close to it should be the timeline chart as we have to show interaction between the two. It is easy when the user doesn't have to scroll up and down to see the changes in the map.
+Since the third chart isn't interacting with other charts and is able to display information independently, I have placed it below the street map.
+<ul>
+<li>Street Map:</li>
+I have chosen different shapes and colors for pumps and people for easy identification. Pumps are displayed as black rectangles and people as circles, males are displayed in shades of purple and females shades of green. The gradient of colors is used to differentiate different age groups. The darker shade is for younger people and shade gets lighter with more age. The tooltip over circles gives the details like gender, age group and date of death.
+My original choice of colors for male and female was red and green, but that didn't work well for color blind people as per colorblindness simulation.
+
+Since some of the important streets had to marked, I have highlighted those in blue. The tooltip over it gives the name of street.
+The light blue rectangle is the work house whereas the lightyellow rectangle is the brewery.
+
+The default view is zoom/pan enabled. Since panning affects cluster selection, I have disabled the zoom functionality to demonstrate clusters. I have used lasso plugin here for clustering which enables us to draw a cluster of any shape and determine the death count in that area.
+<li>Timeline chart:</li>
+I have used line chart here since it is easy to show rise and fall of count with dates. Each point on graph has a tooltip to view date and count.
+The filter for interaction between the two graphs is implemented using brush. The default selection is the entire range of dates. This can be modified with mouse by draging on the x axis. The end lines when dragged, extents the range. Dragging the window helps move the same width of window over the range. With modifications on the brush, the circles displayed on the street map change based on date of death.
+<li>Death count by gender and age:</li>
+I have used multiple line chart to show the deaths of two genders over age groups.
+The blue line shows female death trend and red line shows male deaths. Each point has a tooltip that shows details.
+</ul>
+</p>
+<p>
+<h4>Discovery of facts:</h4>
+<ol>
+<li>We know based on Dr John Snow's experiment that the deaths were concentrated around one of the water pumps. This is visible from the visualization with crowded plot around Broad Street.</li>
+<img src="concentration1.jpg" width=400/>
+<li>The spike in death count due to cholera happened on 1st September from 56 to 143 in a day.</li>
+<img src="count.jpg" width=400/>
+<li>The area of brewery doesn't have many deaths since it is believed that people in this area had beer instead of water.</li>
+<li>There is difference is different gender deaths over different age groups. The group 0-10 has more female deaths than males, 11-40 has more male deaths than females and for ages above 60 there is not a significant difference in death count of males and females.</li>
+<img src="GenderAge.jpg" width=400/>
+</ol>
+</p>
+<p>
+<h4>References:</h4>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/1854_Broad_Street_cholera_outbreak">1854 Cholera outbreak incident</a></br></li>
+<li><a href="https://github.com/skokenes/D3-Lasso-Plugin">Lasso-Plugin</a></br></li>
+<li><a href="https://github.com/d3/d3-3.x-api-reference/blob/master/SVG-Controls.md">Brush for window selection</a></br></li>
+<li><a href="https://www.oreilly.com/library/view/interactive-data-visualization/9781449340223/">Interactive data visualization</a></br></li>
+</ul>
+</p>
+</br>
+</br>
+</body>
+</html>
